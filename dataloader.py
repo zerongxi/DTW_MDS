@@ -10,7 +10,7 @@ def read_data(path=DATA_PATH):
     :param path:
     :return: controller: a list of 2D array, time_index x (elevator, aileron, throttle)
     task: task id
-    success: success (1.0) or failure (0.0)
+    success: success (True) or failure (False)
     """
     with open(path, "rb") as fp:
         controller, task, success = pickle.load(fp)
