@@ -4,6 +4,12 @@ from sklearn.svm import SVC
 from sklearn.model_selection import cross_val_score
 from sklearn.manifold import MDS
 from imblearn.over_sampling import SMOTE
+import os
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 
 def _predict_success(x, y, model):
@@ -41,11 +47,30 @@ def predict_task(success_only=False):
     if success_only:
         controller = [c for c, s in zip(controller, success) if s]
         task = [t for t, s in zip(task, success) if s]
+    # if os.path.exists("distance_matrix.txt"):
+    #     distance_matrix = np.loadtxt("distance_matrix.txt")
+    # else:
     distance_matrix = apply_dtw(controller)
     features = MDS(n_components=8, dissimilarity="precomputed").fit_transform(distance_matrix)
     features, labels = SMOTE(k_neighbors=2).fit_resample(features, task)
-    score = np.mean(cross_val_score(SVC(), features, labels, scoring="accuracy", cv=5, n_jobs=5))
-    print("Predict task: {:.3f}".format(score))
+    svm_pre = np.mean(cross_val_score(SVC(), features, labels, scoring="accuracy", cv=5, n_jobs=5))
+    print("Predict task with SVM: {:.3f}".format(svm_pre))
+    
+    knn = KNeighborsClassifier(n_neighbors=10)
+    knn_pre = np.mean(cross_val_score(knn, features, labels, scoring="accuracy", cv=5, n_jobs=5))
+    print("Predict task with KNN: {:.3f}".format(knn_pre))
+    logreg = LogisticRegression()
+    logreg_pre = np.mean(cross_val_score(logreg, features, labels, scoring="accuracy", cv=5, n_jobs=5))
+    print("Predict task with Log: {:.3f}".format(logreg_pre))
+    gnb = GaussianNB()
+    gnb_pre = np.mean(cross_val_score(gnb, features, labels, scoring="accuracy", cv=5, n_jobs=5))
+    print("Predict task with GaussanNB: {:.3f}".format(gnb_pre))
+    rf = RandomForestClassifier()
+    rf_pre = np.mean(cross_val_score(rf, features, labels, scoring="accuracy", cv=5, n_jobs=5))
+    print("Predict task with RF: {:.3f}".format(rf_pre))
+    lda = LinearDiscriminantAnalysis()
+    lda_pre = np.mean(cross_val_score(lda, features, labels, scoring="accuracy", cv=5, n_jobs=5))
+    print("Predict task with LDA: {:.3f}".format(lda_pre))
     return
 
 
