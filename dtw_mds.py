@@ -12,6 +12,16 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 
+class Model():
+    def __init__(self):
+        self.svc = SVC()
+        self.knn = KNeighborsClassifier(n_neighbors=10)
+        self.logreg = LogisticRegression()
+        self.gnb = GaussianNB()
+        self.rf = RandomForestClassifier()
+        self.lda = LinearDiscriminantAnalysis()
+
+
 def _predict_success(x, y, model):
     distance_matrix = apply_dtw(x)
     features = MDS(n_components=3, dissimilarity="precomputed").fit_transform(distance_matrix)
@@ -25,7 +35,8 @@ def predict_success():
     controller, task, success = read_data()
     unique_tasks = sorted(list(set(task)))
     scores = list()
-    model = SVC()
+    # model = SVC()
+    model = Model()
     for t in unique_tasks:
         idx = [u == t for u in task]
         controller_ = [c for c, i in zip(controller, idx) if i]
@@ -35,8 +46,9 @@ def predict_success():
         success_rate = np.sum(success_) / len(success_)
         if success_rate < 1e-8 or success_rate > 1 - 1e-8:
             continue
-
-        scores.append(_predict_success(controller_, success_, model))
+        scores.append(_predict_success(controller_, success_, model.lda))
+        str = "Prediction accurate on task %d is %.3f" % (t, scores[t-1])
+        print(str)
     print("Predict success: {:.3f}".format(np.mean(scores)))
     return
 
@@ -47,33 +59,32 @@ def predict_task(success_only=False):
     if success_only:
         controller = [c for c, s in zip(controller, success) if s]
         task = [t for t, s in zip(task, success) if s]
-    # if os.path.exists("distance_matrix.txt"):
-    #     distance_matrix = np.loadtxt("distance_matrix.txt")
-    # else:
+
     distance_matrix = apply_dtw(controller)
     features = MDS(n_components=8, dissimilarity="precomputed").fit_transform(distance_matrix)
     features, labels = SMOTE(k_neighbors=2).fit_resample(features, task)
-    svm_pre = np.mean(cross_val_score(SVC(), features, labels, scoring="accuracy", cv=5, n_jobs=5))
+
+    model=Model()
+    svm_pre = np.mean(cross_val_score(model.svc, features, labels, scoring="accuracy", cv=5, n_jobs=5))
     print("Predict task with SVM: {:.3f}".format(svm_pre))
-    
-    knn = KNeighborsClassifier(n_neighbors=10)
-    knn_pre = np.mean(cross_val_score(knn, features, labels, scoring="accuracy", cv=5, n_jobs=5))
+
+    knn_pre = np.mean(cross_val_score(model.knn, features, labels, scoring="accuracy", cv=5, n_jobs=5))
     print("Predict task with KNN: {:.3f}".format(knn_pre))
-    logreg = LogisticRegression()
-    logreg_pre = np.mean(cross_val_score(logreg, features, labels, scoring="accuracy", cv=5, n_jobs=5))
+
+    logreg_pre = np.mean(cross_val_score(model.logreg, features, labels, scoring="accuracy", cv=5, n_jobs=5))
     print("Predict task with Log: {:.3f}".format(logreg_pre))
-    gnb = GaussianNB()
-    gnb_pre = np.mean(cross_val_score(gnb, features, labels, scoring="accuracy", cv=5, n_jobs=5))
+
+    gnb_pre = np.mean(cross_val_score(model.gnb, features, labels, scoring="accuracy", cv=5, n_jobs=5))
     print("Predict task with GaussanNB: {:.3f}".format(gnb_pre))
-    rf = RandomForestClassifier()
-    rf_pre = np.mean(cross_val_score(rf, features, labels, scoring="accuracy", cv=5, n_jobs=5))
+
+    rf_pre = np.mean(cross_val_score(model.rf, features, labels, scoring="accuracy", cv=5, n_jobs=5))
     print("Predict task with RF: {:.3f}".format(rf_pre))
-    lda = LinearDiscriminantAnalysis()
-    lda_pre = np.mean(cross_val_score(lda, features, labels, scoring="accuracy", cv=5, n_jobs=5))
+
+    lda_pre = np.mean(cross_val_score(model.lda, features, labels, scoring="accuracy", cv=5, n_jobs=5))
     print("Predict task with LDA: {:.3f}".format(lda_pre))
     return
 
 
 if __name__ == "__main__":
-    # predict_success()
-    predict_task(False)
+    predict_success()
+    # predict_task(False)
