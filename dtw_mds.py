@@ -119,7 +119,7 @@ def predict_task(success_only=False):
 
     lda_pre = np.mean(cross_val_score(model.lda, features, labels, scoring="accuracy", cv=5, n_jobs=5))
     print("Predict task with LDA: {:.3f}".format(lda_pre))
-    return
+    return [svm_pre, knn_pre, logreg_pre, gnb_pre, rf_pre, lda_pre]
 
 
 if __name__ == "__main__":
