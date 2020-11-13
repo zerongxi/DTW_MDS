@@ -10,18 +10,16 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-
-
-from sklearn.metrics.pairwise import euclidean_distances
-from scipy.interpolate import interp1d
-from sklearn.manifold import TSNE
+from sklearn import preprocessing
 from sklearn.decomposition import PCA
+
+from mpl_toolkits.mplot3d import Axes3D
 
 class Model():
     def __init__(self):
         self.svc = SVC()
         self.knn = KNeighborsClassifier(n_neighbors=10)
-        self.logreg = LogisticRegression()
+        self.logreg = LogisticRegression(random_state=0)
         self.gnb = GaussianNB()
         self.rf = RandomForestClassifier()
         self.lda = LinearDiscriminantAnalysis()
@@ -54,9 +52,9 @@ def compute_eud_distance(data):
 
 
 def _predict_success(x, y, model):
-    # distance_matrix = apply_dtw(x)
-    distance_matrix = compute_eud_distance(x)
-    features = MDS(n_components=3, dissimilarity="precomputed").fit_transform(distance_matrix)
+    distance_matrix = apply_dtw(x)
+    # distance_matrix = compute_eud_distance(x)
+    features = MDS(n_components=8, dissimilarity="precomputed").fit_transform(distance_matrix)
     features, labels = SMOTE(k_neighbors=2).fit_resample(features, y)
     score = np.mean(cross_val_score(model, features, labels, scoring="accuracy", cv=5, n_jobs=5))
     return score
@@ -88,40 +86,48 @@ def predict_success():
 
 def predict_task(success_only=False):
     """Predict which task the controller data is associated with"""
-    # controller, task, success = read_data()
     controller, aircraft, task, uid, success = read_data()
     if success_only:
         controller = [c for c, s in zip(controller, success) if s]
         task = [t for t, s in zip(task, success) if s]
 
-    distance_matrix = compute_eud_distance(controller)
+    distance_matrix = apply_dtw(controller)
+    # distance_matrix = compute_eud_distance(controller) #compute euclidean distance
 
-    # distance_matrix = apply_dtw(controller)
     features = MDS(n_components=8, dissimilarity="precomputed").fit_transform(distance_matrix)
-    # feat_pca = PCA(n_components=8).fit_transform(distance_matrix)
+    # features = PCA(n_components=24).fit_transform(distance_matrix)
     features, labels = SMOTE(k_neighbors=2).fit_resample(features, task)
 
     model=Model()
+
+    # svm_pre = np.mean(split_cross_validation(model.svc, features, labels, success, 5))
     svm_pre = np.mean(cross_val_score(model.svc, features, labels, scoring="accuracy", cv=5, n_jobs=5))
     print("Predict task with SVM: {:.3f}".format(svm_pre))
 
+    # knn_pre = np.mean(split_cross_validation(model.knn, features, labels, success, 5))
     knn_pre = np.mean(cross_val_score(model.knn, features, labels, scoring="accuracy", cv=5, n_jobs=5))
     print("Predict task with KNN: {:.3f}".format(knn_pre))
 
-    logreg_pre = np.mean(cross_val_score(model.logreg, features, labels, scoring="accuracy", cv=5, n_jobs=5))
+    # logreg_pre = np.mean(split_cross_validation(model.logreg, preprocessing.scale(features), labels, success, 5))
+    logreg_pre = np.mean(cross_val_score(model.logreg, preprocessing.scale(features), labels, scoring="accuracy", cv=5, n_jobs=5))
     print("Predict task with Log: {:.3f}".format(logreg_pre))
 
+    # gnb_pre = np.mean(split_cross_validation(model.gnb, features, labels, success, 5))
     gnb_pre = np.mean(cross_val_score(model.gnb, features, labels, scoring="accuracy", cv=5, n_jobs=5))
     print("Predict task with GaussanNB: {:.3f}".format(gnb_pre))
 
+    # rf_pre = np.mean(split_cross_validation(model.rf, features, labels, success, 5))
     rf_pre = np.mean(cross_val_score(model.rf, features, labels, scoring="accuracy", cv=5, n_jobs=5))
     print("Predict task with RF: {:.3f}".format(rf_pre))
 
+    # lda_pre = np.mean(split_cross_validation(model.lda, features, labels, success, 5))
     lda_pre = np.mean(cross_val_score(model.lda, features, labels, scoring="accuracy", cv=5, n_jobs=5))
     print("Predict task with LDA: {:.3f}".format(lda_pre))
     return [svm_pre, knn_pre, logreg_pre, gnb_pre, rf_pre, lda_pre]
+    # return
 
 
 if __name__ == "__main__":
-    predict_success()
-    # predict_task(False)
+    # predict_success()
+    scores = predict_task(True)
+    print(np.mean(scores))
