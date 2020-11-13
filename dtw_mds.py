@@ -13,7 +13,9 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn import preprocessing
 from sklearn.decomposition import PCA
 
+from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+
 
 class Model():
     def __init__(self):
@@ -23,6 +25,19 @@ class Model():
         self.gnb = GaussianNB()
         self.rf = RandomForestClassifier()
         self.lda = LinearDiscriminantAnalysis()
+
+
+def plot_controller(controller, save_path):
+    # fig = plt.figure()
+    ax1 = plt.axes(projection='3d')
+    c = controller.tolist()
+    x = [i[0] for i in c]
+    y = [i[1] for i in c]
+    z = [i[2] for i in c]
+    ax1.scatter3D(x, y, z, cmap='Blues')
+    plt.savefig(save_path)
+    # plt.show()
+    plt.clf()
 
 
 def arr_pad_align(arr1, arr2):
@@ -90,6 +105,10 @@ def predict_task(success_only=False):
     if success_only:
         controller = [c for c, s in zip(controller, success) if s]
         task = [t for t, s in zip(task, success) if s]
+
+        # for i in range(len(controller)):
+        #     save_path = '/media/volume/sh/DTW_MDS/plot/'+str(i+1)+'.png'
+        #     plot_controller(controller[i],save_path)
 
     distance_matrix = apply_dtw(controller)
     # distance_matrix = compute_eud_distance(controller) #compute euclidean distance
