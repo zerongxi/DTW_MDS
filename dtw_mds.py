@@ -16,6 +16,7 @@ from sklearn.decomposition import PCA
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+import time
 
 class Model():
     def __init__(self):
@@ -69,15 +70,16 @@ def compute_eud_distance(data):
 def _predict_success(x, y, model):
     distance_matrix = apply_dtw(x)
     # distance_matrix = compute_eud_distance(x)
+
     features = MDS(n_components=8, dissimilarity="precomputed").fit_transform(distance_matrix)
+    # features = PCA(n_components=8).fit_transform(distance_matrix)
     features, labels = SMOTE(k_neighbors=2).fit_resample(features, y)
-    score = np.mean(cross_val_score(model, features, labels, scoring="accuracy", cv=5, n_jobs=5))
+    score = np.mean(cross_val_score(model, preprocessing.scale(features), labels, scoring="accuracy", cv=5, n_jobs=5))
     return score
 
 
 def predict_success():
     """Predict task preformance (success or failure)"""
-    # controller, task, success = read_data()
     controller, aircraft, task, uid, success= read_data()
     unique_tasks = sorted(list(set(task)))
     scores = list()
@@ -92,7 +94,9 @@ def predict_success():
         success_rate = np.sum(success_) / len(success_)
         if success_rate < 1e-8 or success_rate > 1 - 1e-8:
             continue
-        scores.append(_predict_success(controller_, success_, model.svc))
+
+        controller_ = [c[:c.shape[0] // 2] for c in controller_] #get half controllers
+        scores.append(_predict_success(controller_, success_, model.logreg))
         str = "Prediction accurate on task %d is %.3f" % (t, scores[t-1])
         print(str)
     print("Predict success: {:.3f}".format(np.mean(scores)))
@@ -107,14 +111,31 @@ def predict_task(success_only=False):
         task = [t for t, s in zip(task, success) if s]
 
         # for i in range(len(controller)):
-        #     save_path = '/media/volume/sh/DTW_MDS/plot/'+str(i+1)+'.png'
-        #     plot_controller(controller[i],save_path)
+            # save_path = '/media/volume/sh/DTW_MDS/plot/'+str(i+1)+'.png'
+            # plot_controller(controller[i],save_path)
+
+    # L = []
+    # for i in range(len(controller)):
+    #     l = len(controller[i])
+    #     if l>6000:
+    #         continue
+    #     L.append(l)
+    # plt.hist(L, bins=30, facecolor="blue", edgecolor="black", alpha=0.7)
+    # plt.xlabel("Length of controller series")
+    # plt.ylabel("Frequency")
+    # # plt.title("The overall distribution of the length of controller series")
+    # plt.savefig('/media/volume/sh/DTW_MDS/data2.png')
+    # plt.show()
 
     distance_matrix = apply_dtw(controller)
     # distance_matrix = compute_eud_distance(controller) #compute euclidean distance
 
-    features = MDS(n_components=8, dissimilarity="precomputed").fit_transform(distance_matrix)
-    # features = PCA(n_components=24).fit_transform(distance_matrix)
+    start = time.time()
+    # features = MDS(n_components=8, dissimilarity="precomputed").fit_transform(distance_matrix)
+    features = PCA(n_components=12).fit_transform(distance_matrix)
+    end= time.time()
+    print(end-start)
+
     features, labels = SMOTE(k_neighbors=2).fit_resample(features, task)
 
     model=Model()
@@ -147,6 +168,6 @@ def predict_task(success_only=False):
 
 
 if __name__ == "__main__":
-    # predict_success()
-    scores = predict_task(True)
-    print(np.mean(scores))
+    predict_success()
+    # scores = predict_task(False)
+    # print(np.mean(scores))
